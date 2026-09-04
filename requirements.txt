@@ -3,3 +3,5 @@ uvicorn
 sqlalchemy
 pwdlib[argon2]
 pydantic[email]
+pyjwt
+python-multipart
