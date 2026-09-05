@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import get_current_user
 from app.models.todo import Todo
+from app.models.user import User
 from app.schemas.todo import TodoCreate, TodoUpdate, TodoPatch, TodoResponse
 
 
@@ -11,17 +13,27 @@ router = APIRouter(prefix="/todos", tags=["Todos"])
 
 # GET
 @router.get("", response_model=list[TodoResponse])
-def get_todos(db: Session = Depends(get_db)):
-    todos = db.query(Todo).all()
+def get_todos(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    todos = db.query(Todo).filter(
+        Todo.user_id == current_user.id
+    ).all()
     
     return todos
 
 
 # GET_ID
 @router.get("/{todo_id}", response_model=TodoResponse)
-def get_todo(todo_id: int, db: Session = Depends(get_db)):
+def get_todo(
+    todo_id: int, 
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     todo = db.query(Todo).filter(
-        Todo.id == todo_id
+        Todo.id == todo_id,
+        Todo.user_id == current_user.id
     ).first()
     
     if todo is None:
@@ -32,11 +44,16 @@ def get_todo(todo_id: int, db: Session = Depends(get_db)):
 
 # POST
 @router.post("", response_model=TodoResponse, status_code=201)
-def create_todo(todo_data: TodoCreate, db: Session = Depends(get_db)):
+def create_todo(
+    todo_data: TodoCreate, 
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     todo = Todo(
         title=todo_data.title,
         description= todo_data.description,
-        completed=todo_data.completed
+        completed=todo_data.completed,
+        user_id=current_user.id
     )
     
     db.add(todo)
@@ -51,10 +68,12 @@ def create_todo(todo_data: TodoCreate, db: Session = Depends(get_db)):
 def update_todo(
     todo_id: int,
     todo_data: TodoUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     todo = db.query(Todo).filter(
-        Todo.id == todo_id
+        Todo.id == todo_id,
+        Todo.user_id == current_user.id
     ).first()
     
     if todo is None:
@@ -75,10 +94,12 @@ def update_todo(
 def patch_todo(
     todo_id: int,
     todo_data: TodoPatch,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     todo = db.query(Todo).filter(
-        Todo.id == todo_id
+        Todo.id == todo_id,
+        Todo.user_id == current_user.id
     ).first()
     
     if todo is None:
@@ -101,9 +122,13 @@ def patch_todo(
 
 # DELETE
 @router.delete("/{todo_id}", response_model=TodoResponse)
-def delete_todo(todo_id: int, db: Session = Depends(get_db)):
+def delete_todo(
+    todo_id: int, 
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)):
     todo = db.query(Todo).filter(
-        Todo.id == todo_id
+        Todo.id == todo_id,
+        Todo.user_id == current_user.id
     ).first()
     
     if todo is None:

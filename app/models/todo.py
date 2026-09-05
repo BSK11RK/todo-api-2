@@ -1,5 +1,5 @@
 # DBの設計
-from sqlalchemy import Boolean, Integer, String
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -12,3 +12,8 @@ class Todo(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(String(500), nullable=False)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
