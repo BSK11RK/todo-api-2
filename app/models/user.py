@@ -1,9 +1,14 @@
 # DBの設計
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
+if TYPE_CHECKING:
+    from app.models.todo import Todo
+    
 
 class User(Base):
     __tablename__ = "users"
@@ -16,3 +21,8 @@ class User(Base):
         nullable=False
     )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    todos: Mapped[list["Todo"]] = relationship(
+        "Todo",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
