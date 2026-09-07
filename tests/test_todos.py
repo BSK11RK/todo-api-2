@@ -176,3 +176,110 @@ def test_user_cannot_access_other_users_todo(client):
     )
 
     assert res.status_code == 404
+    
+    
+# Timestamp
+def test_todo_has_timestamps(client):
+    # ユーザー作成
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "email": "timestamp@example.com",
+            "password": "password123"
+        }
+    )
+
+    assert register_response.status_code == 201
+
+    # ログイン
+    login_response = client.post(
+        "/auth/login",
+        data={
+            "username": "timestamp@example.com",
+            "password": "password123"
+        }
+    )
+
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Todo作成
+    response = client.post(
+        "/todos",
+        json={
+            "title": "Timestamp Test",
+            "description": "日時を確認する",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+
+    assert "created_at" in data
+    assert "updated_at" in data
+    assert data["created_at"] is not None
+    assert data["updated_at"] is not None
+    
+    
+# updated_atの更新
+def test_todo_updated_at_changes(client):
+    # ユーザー作成
+    client.post(
+        "/auth/register",
+        json={
+            "email": "updated@example.com",
+            "password": "password123"
+        }
+    )
+
+    # ログイン
+    login_response = client.post(
+        "/auth/login",
+        data={
+            "username": "updated@example.com",
+            "password": "password123"
+        }
+    )
+
+    token = login_response.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Todo作成
+    create_response = client.post(
+        "/todos",
+        json={
+            "title": "Original",
+            "description": "Original description",
+            "completed": False
+        },
+        headers=headers,
+    )
+
+    todo = create_response.json()
+
+    todo_id = todo["id"]
+    created_at = todo["created_at"]
+    updated_at = todo["updated_at"]
+
+    # Todo更新
+    update_response = client.patch(
+        f"/todos/{todo_id}",
+        json={
+            "completed": True,
+        },
+        headers=headers
+    )
+
+    assert update_response.status_code == 200
+
+    updated_todo = update_response.json()
+
+    assert updated_todo["created_at"] == created_at
+    assert updated_todo["updated_at"] >= updated_at
