@@ -468,3 +468,167 @@ def test_get_todos_sort_by_created_at_asc(client):
 
     assert data[0]["title"] == "Todo 1"
     assert data[1]["title"] == "Todo 2"
+    
+    
+# ページネーション
+def test_get_todos_pagination(client):
+    # ユーザー作成
+    client.post(
+        "/auth/register",
+        json={
+            "email": "pagination@example.com",
+            "password": "password123"
+        }
+    )
+    
+    # ログイン
+    login_res = client.post(
+        "/auth/login",
+        data={
+            "username": "pagination@example.com",
+            "password": "password123"
+        }
+    )
+    
+    token = login_res.json()["access_token"]
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Todoを5件作成
+    for i in range(1, 6):
+        res = client.post(
+            "/todos",
+            json={
+                "title": f"Todo {i}",
+                "description": f"Description {i}",
+                "completed": False
+            },
+            headers=headers
+        )
+        
+        assert res.status_code == 201
+        
+    # 1ページ2件
+    res = client.get(
+        "/todos?page=1&limit=2",
+        headers=headers
+    )
+
+    assert res.status_code == 200
+
+    data = res.json()
+
+    assert len(data) == 2
+
+    # デフォルトがcreated_at descなので新しいものから
+    assert data[0]["title"] == "Todo 5"
+    assert data[1]["title"] == "Todo 4"
+
+    # 2ページ目
+    res = client.get(
+        "/todos?page=2&limit=2",
+        headers=headers
+    )
+
+    assert res.status_code == 200
+
+    data = res.json()
+
+    assert len(data) == 2
+
+    assert data[0]["title"] == "Todo 3"
+    assert data[1]["title"] == "Todo 2"
+
+    # 3ページ目
+    res = client.get(
+        "/todos?page=3&limit=2",
+        headers=headers
+    )
+
+    assert res.status_code == 200
+
+    data = res.json()
+
+    assert len(data) == 1
+    assert data[0]["title"] == "Todo 1"
+    
+    
+# 検索
+def test_search_todos(client):
+    # ユーザー作成
+    client.post(
+        "/auth/register",
+        json={
+            "email": "search@example.com",
+            "password": "password123"
+        }
+    )
+
+    # ログイン
+    login_res = client.post(
+        "/auth/login",
+        data={
+            "username": "search@example.com",
+            "password": "password123"
+        }
+    )
+
+    assert login_res.status_code == 200
+
+    token = login_res.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Todo 1
+    client.post(
+        "/todos",
+        json={
+            "title": "FastAPIを勉強する",
+            "description": "JWTを勉強する",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    # Todo 2
+    client.post(
+        "/todos",
+        json={
+            "title": "Dockerを勉強する",
+            "description": "FastAPIをコンテナ化する",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    # Todo 3
+    client.post(
+        "/todos",
+        json={
+            "title": "買い物をする",
+            "description": "スーパーに行く",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    # FastAPIで検索
+    res = client.get(
+        "/todos?search=FastAPI",
+        headers=headers
+    )
+
+    assert res.status_code == 200
+
+    data = res.json()
+
+    assert len(data) == 2
+
+    titles = {
+        todo["title"]
+        for todo in data
+    }
+
+    assert "FastAPIを勉強する" in titles
+    assert "Dockerを勉強する" in titles
+    assert "買い物をする" not in titles

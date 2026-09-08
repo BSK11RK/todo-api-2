@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
-
 from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -16,6 +17,12 @@ router = APIRouter(prefix="/todos", tags=["Todos"])
 # GET
 @router.get("", response_model=list[TodoResponse])
 def get_todos(
+    search: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100,
+        description="Todoのタイトルまたは説明を検索"
+    ),
     completed: bool | None = Query(
         default=None, 
         description="完全状態で絞り込む"
@@ -43,7 +50,18 @@ def get_todos(
         Todo.user_id == current_user.id
     )
     
-    # completedで絞り込む
+    # 検索
+    if search is not None:
+        search_pattern = f"%{search}%"
+        
+        query = query.filter(
+            or_(
+                Todo.title.ilike(search_pattern),
+                Todo.description.ilike(search_pattern)
+            )
+        )
+    
+    # 完了状態で絞り込む
     if completed is not None:
         query = query.filter(
             Todo.completed == completed
