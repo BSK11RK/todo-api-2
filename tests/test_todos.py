@@ -81,7 +81,7 @@ def test_get_todos(client):
             "description": "説明1",
             "completed": False
         },
-        headers=headers,
+        headers=headers
     )
 
     client.post(
@@ -102,8 +102,8 @@ def test_get_todos(client):
     data = res.json()
 
     assert len(data) == 2
-    assert data[0]["title"] == "Todo 1"
-    assert data[1]["title"] == "Todo 2"
+    assert data[0]["title"] == "Todo 2"
+    assert data[1]["title"] == "Todo 1"
     
     
 # 他のユーザーのTodoを操作できないことをテスト
@@ -346,3 +346,125 @@ def test_get_todos_by_completed(client):
     assert len(data) == 1
     assert data[0]["title"] == "未完了Todo"
     assert data[0]["completed"] is False
+    
+    
+# 並び替え
+def test_get_todos_sort_by_created_at(client):
+    # ユーザー作成
+    client.post(
+        "/auth/register",
+        json={
+            "email": "sort@example.com",
+            "password": "password123"
+        }
+    )
+
+    # ログイン
+    login_res = client.post(
+        "/auth/login",
+        data={
+            "username": "sort@example.com",
+            "password": "password123"
+        }
+    )
+
+    assert login_res.status_code == 200
+
+    token = login_res.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Todo 1
+    res_1 = client.post(
+        "/todos",
+        json={
+            "title": "Todo 1",
+            "description": "最初に作成",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    assert res_1.status_code == 201
+
+    # Todo 2
+    res_2 = client.post(
+        "/todos",
+        json={
+            "title": "Todo 2",
+            "description": "後に作成",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    assert res_2.status_code == 201
+
+    # 新しい順で取得
+    res = client.get(
+        "/todos?sort=created_at&order=desc",
+        headers=headers
+    )
+
+    assert res.status_code == 200
+
+    data = res.json()
+
+    assert len(data) == 2
+    assert data[0]["title"] == "Todo 2"
+    assert data[1]["title"] == "Todo 1"
+    
+    
+# 古い順
+def test_get_todos_sort_by_created_at_asc(client):
+    client.post(
+        "/auth/register",
+        json={
+            "email": "sort-asc@example.com",
+            "password": "password123",
+        },
+    )
+
+    login_res = client.post(
+        "/auth/login",
+        data={
+            "username": "sort-asc@example.com",
+            "password": "password123"
+        }
+    )
+
+    token = login_res.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/todos",
+        json={
+            "title": "Todo 1",
+            "description": "最初",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    client.post(
+        "/todos",
+        json={
+            "title": "Todo 2",
+            "description": "後",
+            "completed": False
+        },
+        headers=headers
+    )
+
+    res = client.get(
+        "/todos?sort=created_at&order=asc",
+        headers=headers
+    )
+
+    assert res.status_code == 200
+
+    data = res.json()
+
+    assert data[0]["title"] == "Todo 1"
+    assert data[1]["title"] == "Todo 2"

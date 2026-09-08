@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from typing import Literal
+
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.todo import Todo
@@ -18,6 +20,15 @@ def get_todos(
         default=None, 
         description="完全状態で絞り込む"
     ),
+    # 入力できる値をこの2つに限定する
+    sort: Literal["created_at", "updated_at"] = Query(
+        default="created_at",
+        description="並び替える項目"
+    ),
+    order: Literal["asc", "desc"] = Query(
+        default="desc",
+        description="並び順"
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -25,10 +36,23 @@ def get_todos(
         Todo.user_id == current_user.id
     )
     
+    # completedで絞り込む
     if completed is not None:
         query = query.filter(
             Todo.completed == completed
         )
+        
+    # 並び替え
+    if sort == "created_at":
+        sort_column = Todo.created_at
+    else:
+        sort_column = Todo.updated_at
+        
+    # 昇順・降順を決める
+    if order == "asc":
+        query = query.order_by(sort_column.asc())
+    else:
+        query = query.order_by(sort_column.desc())
         
     todos = query.all()
     
