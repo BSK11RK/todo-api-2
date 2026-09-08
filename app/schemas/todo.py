@@ -30,3 +30,11 @@ class TodoResponse(BaseModel):
     updated_at: datetime
     
     model_config = {"from_attributes": True}
+    
+    
+class TodoListResponse(BaseModel):
+    items: list[TodoResponse]
+    page: int
+    limit: int
+    total: int
+    total_pages: int

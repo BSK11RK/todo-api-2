@@ -8,14 +8,20 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.todo import Todo
 from app.models.user import User
-from app.schemas.todo import TodoCreate, TodoUpdate, TodoPatch, TodoResponse
+from app.schemas.todo import (
+    TodoCreate, 
+    TodoUpdate, 
+    TodoPatch, 
+    TodoResponse,
+    TodoListResponse
+)
 
 
 router = APIRouter(prefix="/todos", tags=["Todos"])
 
 
 # GET
-@router.get("", response_model=list[TodoResponse])
+@router.get("", response_model=TodoListResponse)
 def get_todos(
     search: str | None = Query(
         default=None,
@@ -73,11 +79,14 @@ def get_todos(
     else:
         sort_column = Todo.updated_at
         
-    # 昇順・降順を決める
+    # 昇順・降順
     if order == "asc":
         query = query.order_by(sort_column.asc())
     else:
         query = query.order_by(sort_column.desc())
+        
+    # 全件数を取得
+    total = query.count()
         
     # ページ番号からoffsetを計算
     offset = (page - 1) * limit
@@ -85,7 +94,16 @@ def get_todos(
     # 指定された件数だけ取得
     todos = query.offset(offset).limit(limit).all()
     
-    return todos
+    # 総ページ数を計算
+    total_pages = (total + limit - 1) // limit
+    
+    return {
+        "items": todos,
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": total_pages
+    }
 
 
 # GET_ID

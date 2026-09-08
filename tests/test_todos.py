@@ -101,9 +101,9 @@ def test_get_todos(client):
 
     data = res.json()
 
-    assert len(data) == 2
-    assert data[0]["title"] == "Todo 2"
-    assert data[1]["title"] == "Todo 1"
+    assert len(data["items"]) == 2
+    assert data["items"][0]["title"] == "Todo 2"
+    assert data["items"][1]["title"] == "Todo 1"
     
     
 # 他のユーザーのTodoを操作できないことをテスト
@@ -343,9 +343,9 @@ def test_get_todos_by_completed(client):
     
     data = res.json()
     
-    assert len(data) == 1
-    assert data[0]["title"] == "未完了Todo"
-    assert data[0]["completed"] is False
+    assert len(data["items"]) == 1
+    assert data["items"][0]["title"] == "未完了Todo"
+    assert data["items"][0]["completed"] is False
     
     
 # 並び替え
@@ -410,9 +410,12 @@ def test_get_todos_sort_by_created_at(client):
 
     data = res.json()
 
-    assert len(data) == 2
-    assert data[0]["title"] == "Todo 2"
-    assert data[1]["title"] == "Todo 1"
+    assert data["total"] == 2
+    assert data["total_pages"] == 1
+    assert len(data["items"]) == 2
+
+    assert data["items"][0]["title"] == "Todo 2"
+    assert data["items"][1]["title"] == "Todo 1"
     
     
 # 古い順
@@ -466,8 +469,12 @@ def test_get_todos_sort_by_created_at_asc(client):
 
     data = res.json()
 
-    assert data[0]["title"] == "Todo 1"
-    assert data[1]["title"] == "Todo 2"
+    assert data["total"] == 2
+    assert data["total_pages"] == 1
+    assert len(data["items"]) == 2
+
+    assert data["items"][0]["title"] == "Todo 1"
+    assert data["items"][1]["title"] == "Todo 2"
     
     
 # ページネーション
@@ -518,11 +525,14 @@ def test_get_todos_pagination(client):
 
     data = res.json()
 
-    assert len(data) == 2
+    assert data["page"] == 1
+    assert data["limit"] == 2
+    assert data["total"] == 5
+    assert data["total_pages"] == 3
 
-    # デフォルトがcreated_at descなので新しいものから
-    assert data[0]["title"] == "Todo 5"
-    assert data[1]["title"] == "Todo 4"
+    assert len(data["items"]) == 2
+    assert data["items"][0]["title"] == "Todo 5"
+    assert data["items"][1]["title"] == "Todo 4"
 
     # 2ページ目
     res = client.get(
@@ -534,10 +544,10 @@ def test_get_todos_pagination(client):
 
     data = res.json()
 
-    assert len(data) == 2
-
-    assert data[0]["title"] == "Todo 3"
-    assert data[1]["title"] == "Todo 2"
+    assert data["page"] == 2
+    assert len(data["items"]) == 2
+    assert data["items"][0]["title"] == "Todo 3"
+    assert data["items"][1]["title"] == "Todo 2"
 
     # 3ページ目
     res = client.get(
@@ -549,8 +559,9 @@ def test_get_todos_pagination(client):
 
     data = res.json()
 
-    assert len(data) == 1
-    assert data[0]["title"] == "Todo 1"
+    assert data["page"] == 3
+    assert len(data["items"]) == 1
+    assert data["items"][0]["title"] == "Todo 1"
     
     
 # 検索
@@ -622,11 +633,11 @@ def test_search_todos(client):
 
     data = res.json()
 
-    assert len(data) == 2
+    assert len(data["items"]) == 2
 
     titles = {
         todo["title"]
-        for todo in data
+        for todo in data["items"]
     }
 
     assert "FastAPIを勉強する" in titles
