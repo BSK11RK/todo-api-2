@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -14,12 +14,23 @@ router = APIRouter(prefix="/todos", tags=["Todos"])
 # GET
 @router.get("", response_model=list[TodoResponse])
 def get_todos(
+    completed: bool | None = Query(
+        default=None, 
+        description="完全状態で絞り込む"
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    todos = db.query(Todo).filter(
+    query = db.query(Todo).filter(
         Todo.user_id == current_user.id
-    ).all()
+    )
+    
+    if completed is not None:
+        query = query.filter(
+            Todo.completed == completed
+        )
+        
+    todos = query.all()
     
     return todos
 

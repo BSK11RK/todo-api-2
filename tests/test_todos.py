@@ -283,3 +283,66 @@ def test_todo_updated_at_changes(client):
 
     assert updated_todo["created_at"] == created_at
     assert updated_todo["updated_at"] >= updated_at
+    
+    
+# 絞り込み（フィルタリング）
+def test_get_todos_by_completed(client):
+    # ユーザー作成
+    client.post(
+        "/auth/register",
+        json={
+            "email": "filter@example.com",
+            "password": "password123"
+        }
+    )
+    
+    # ログイン
+    login_res = client.post(
+        "/auth/login",
+        data={
+            "username": "filter@example.com",
+            "password": "password123"
+        }
+    )
+    
+    assert login_res.status_code == 200
+    
+    token = login_res.json()["access_token"]
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # 未完了Todo
+    client.post(
+        "/todos",
+        json={
+            "title": "未完了Todo",
+            "description": "まだ終わっていない",
+            "completed": False
+        },
+        headers=headers
+    )
+    
+    # 完了Todo
+    client.post(
+        "/todos",
+        json={
+            "title": "完了Todo",
+            "description": "終わった",
+            "completed": True
+        },
+        headers=headers
+    )
+    
+    # 未完了だけ取得
+    res = client.get(
+        "/todos?completed=false",
+        headers=headers
+    )
+    
+    assert res.status_code == 200
+    
+    data = res.json()
+    
+    assert len(data) == 1
+    assert data[0]["title"] == "未完了Todo"
+    assert data[0]["completed"] is False
