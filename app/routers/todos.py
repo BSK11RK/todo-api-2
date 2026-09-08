@@ -29,6 +29,13 @@ def get_todos(
         default="desc",
         description="並び順"
     ),
+    page: int = Query(default=1, ge=1, description="ページ番号"),
+    limit: int = Query(
+        default=10, 
+        ge=1, 
+        le=100, 
+        description="1ページあたりの件数"
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -54,7 +61,11 @@ def get_todos(
     else:
         query = query.order_by(sort_column.desc())
         
-    todos = query.all()
+    # ページ番号からoffsetを計算
+    offset = (page - 1) * limit
+    
+    # 指定された件数だけ取得
+    todos = query.offset(offset).limit(limit).all()
     
     return todos
 
