@@ -6,14 +6,18 @@ from pwdlib import PasswordHash
 from app.config import settings
 
 
-ALGORITHM = "HS256"
-
 # パスワードハッシュ
 password_hash = PasswordHash.recommended()
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return password_hash.verify(plain_password, hashed_password)
+def verify_password(
+    plain_password: str, 
+    hashed_password: str
+) -> bool:
+    return password_hash.verify(
+        plain_password, 
+        hashed_password
+    )
 
 
 def create_access_token(
@@ -36,7 +40,7 @@ def create_access_token(
     encoded_jwt = jwt.encode(
         to_encode,
         settings.secret_key,
-        algorithm=ALGORITHM
+        algorithm=settings.algorithm
     )
     
     return encoded_jwt
@@ -46,7 +50,7 @@ def decode_access_token(token: str) -> dict:
     payload = jwt.decode(
         token, 
         settings.secret_key, 
-        algorithms=[ALGORITHM]
+        algorithms=[settings.algorithm]
     )
     
     return payload

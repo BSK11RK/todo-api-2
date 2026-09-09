@@ -1,27 +1,22 @@
-from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-
-# プロジェクトのルートディレクトリ
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# dataフォルダ
-DATA_DIR = BASE_DIR / "data"
-
-# dataフォルダがなければ作成
-DATA_DIR.mkdir(exist_ok=True)
-
-# SQLiteデータベースのパス
-DATABASE_URL = f"sqlite:///{DATA_DIR / 'todos.db'}"
+from app.config import settings
 
 
 # DBエンジン
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    settings.database_url, 
+    connect_args={"check_same_thread": False}
+)
 
 
 # DBセッション
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+SessionLocal = sessionmaker(
+    bind=engine, 
+    autocommit=False, 
+    autoflush=False
+)
 
 
 # モデルの親クラス
