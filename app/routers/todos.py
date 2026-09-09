@@ -1,7 +1,6 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -15,6 +14,7 @@ from app.schemas.todo import (
     TodoResponse,
     TodoListResponse
 )
+from app.services.todo_services import get_todos as get_todos_services
 
 
 router = APIRouter(prefix="/todos", tags=["Todos"])
@@ -52,50 +52,16 @@ def get_todos(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Todo).filter(
-        Todo.user_id == current_user.id
+    todos, total, total_pages = get_todos_services(
+        db=db,
+        user_id=current_user.id,
+        search=search,
+        completed=completed,
+        sort=sort,
+        order=order,
+        page=page,
+        limit=limit
     )
-    
-    # 検索
-    if search is not None:
-        search_pattern = f"%{search}%"
-        
-        query = query.filter(
-            or_(
-                Todo.title.ilike(search_pattern),
-                Todo.description.ilike(search_pattern)
-            )
-        )
-    
-    # 完了状態で絞り込む
-    if completed is not None:
-        query = query.filter(
-            Todo.completed == completed
-        )
-        
-    # 並び替え
-    if sort == "created_at":
-        sort_column = Todo.created_at
-    else:
-        sort_column = Todo.updated_at
-        
-    # 昇順・降順
-    if order == "asc":
-        query = query.order_by(sort_column.asc())
-    else:
-        query = query.order_by(sort_column.desc())
-        
-    # 全件数を取得
-    total = query.count()
-        
-    # ページ番号からoffsetを計算
-    offset = (page - 1) * limit
-    
-    # 指定された件数だけ取得
-    todos = query.offset(offset).limit(limit).all()
-    
-    # 総ページ数を計算
-    total_pages = (total + limit - 1) // limit
     
     return {
         "items": todos,
