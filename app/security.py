@@ -3,10 +3,10 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from pwdlib import PasswordHash
 
+from app.config import settings
 
-SECRET_KEY = "change-this-secret-key"
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # パスワードハッシュ
 password_hash = PasswordHash.recommended()
@@ -26,7 +26,7 @@ def create_access_token(
         expire = datetime.now(timezone.utc) + expire_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+            minutes=settings.access_token_expire_minutes
         )
     
     # JWTに有効期限を追加
@@ -35,7 +35,7 @@ def create_access_token(
     # JWTを作成
     encoded_jwt = jwt.encode(
         to_encode,
-        SECRET_KEY,
+        settings.secret_key,
         algorithm=ALGORITHM
     )
     
@@ -43,6 +43,10 @@ def create_access_token(
 
 
 def decode_access_token(token: str) -> dict:
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    payload = jwt.decode(
+        token, 
+        settings.secret_key, 
+        algorithms=[ALGORITHM]
+    )
     
     return payload

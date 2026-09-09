@@ -7,3 +7,4 @@ pyjwt
 python-multipart
 pytest 
 httpx
+pydantic-settings
