@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.models.todo import Todo
 from app.models.user import User
 from app.schemas.todo import (
     TodoCreate, 
@@ -14,7 +13,14 @@ from app.schemas.todo import (
     TodoResponse,
     TodoListResponse
 )
-from app.services.todo_services import get_todos as get_todos_services
+from app.services.todo_service import (
+    create_todo as create_todo_service,
+    delete_todo as delete_todo_service,
+    get_todo as get_todo_service,
+    get_todos as get_todos_service,
+    patch_todo as patch_todo_service,
+    update_todo as update_todo_service
+)
 
 
 router = APIRouter(prefix="/todos", tags=["Todos"])
@@ -52,7 +58,7 @@ def get_todos(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    todos, total, total_pages = get_todos_services(
+    todos, total, total_pages = get_todos_service(
         db=db,
         user_id=current_user.id,
         search=search,
@@ -79,36 +85,39 @@ def get_todo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    todo = db.query(Todo).filter(
-        Todo.id == todo_id,
-        Todo.user_id == current_user.id
-    ).first()
+    todo = get_todo_service(
+        db=db,
+        user_id=current_user.id,
+        todo_id=todo_id
+    )
     
     if todo is None:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Todo not found"
+        )
     
     return todo
 
 
 # POST
-@router.post("", response_model=TodoResponse, status_code=201)
+@router.post(
+    "", 
+    response_model=TodoResponse, 
+    status_code=status.HTTP_201_CREATED
+)
 def create_todo(
     todo_data: TodoCreate, 
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    todo = Todo(
+    return create_todo_service(
+        db=db,
+        user_id=current_user.id,
         title=todo_data.title,
-        description= todo_data.description,
-        completed=todo_data.completed,
-        user_id=current_user.id
+        description=todo_data.description,
+        completed=todo_data.completed
     )
-    
-    db.add(todo)
-    db.commit()
-    db.refresh(todo)
-    
-    return todo
 
 
 # PUT
@@ -119,22 +128,25 @@ def update_todo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    todo = db.query(Todo).filter(
-        Todo.id == todo_id,
-        Todo.user_id == current_user.id
-    ).first()
+    todo = get_todo_service(
+        db=db,
+        user_id=current_user.id,
+        todo_id=todo_id
+    )
     
     if todo is None:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Todo not found"
+        )
     
-    todo.title = todo_data.title
-    todo.description = todo_data.description
-    todo.completed = todo_data.completed
-    
-    db.commit()
-    db.refresh(todo)
-    
-    return todo
+    return update_todo_service(
+        db=db,
+        todo=todo,
+        title=todo_data.title,
+        description=todo_data.description,
+        completed=todo_data.completed
+    )
 
 
 # PATCH
@@ -145,27 +157,25 @@ def patch_todo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    todo = db.query(Todo).filter(
-        Todo.id == todo_id,
-        Todo.user_id == current_user.id
-    ).first()
+    todo = get_todo_service(
+        db=db,
+        user_id=current_user.id,
+        todo_id=todo_id
+    )
     
     if todo is None:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Todo not found"
+        )
     
-    if todo_data.title is not None:
-        todo.title = todo_data.title
-        
-    if todo_data.description is not None:
-        todo.description = todo_data.description
-        
-    if todo_data.completed is not None:
-        todo.completed = todo_data.completed
-        
-    db.commit()
-    db.refresh(todo)
-    
-    return todo
+    return patch_todo_service(
+        db=db,
+        todo=todo,
+        title=todo_data.title,
+        description=todo_data.description,
+        completed=todo_data.completed
+    )
 
 
 # DELETE
@@ -174,15 +184,16 @@ def delete_todo(
     todo_id: int, 
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)):
-    todo = db.query(Todo).filter(
-        Todo.id == todo_id,
-        Todo.user_id == current_user.id
-    ).first()
+    todo = get_todo_service(
+        db=db,
+        user_id=current_user.id,
+        todo_id=todo_id
+    )
     
     if todo is None:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Todo not found"
+        )
     
-    db.delete(todo)
-    db.commit()
-    
-    return todo
+    return delete_todo_service(db=db, todo=todo)
