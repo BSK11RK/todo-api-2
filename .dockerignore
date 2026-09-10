@@ -4,5 +4,6 @@ __pycache__/
 .git/
 .gitignore
 .env
-data/*.db
+.vscode/
 .pytest_cache/
+data/*.db
